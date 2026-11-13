@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="151">
+<title>DocFind · 大文本字段检索 · 151制作</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --line:#e3e8ef; --line2:#eef2f7;
+    --text:#1f2937; --muted:#6b7280; --faint:#9aa4b2;
+    --brand:#2563eb; --brand-soft:#eff5ff; --brand-line:#bfd6ff;
+    --hit:#fff3c4; --hit-border:#f0c45a; --ok:#15803d; --danger:#dc2626;
+    --mono:Consolas,"Cascadia Mono","Microsoft YaHei Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;}
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  .app{display:flex;flex-direction:column;height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:12px 22px;background:var(--panel);
+    border-bottom:1px solid var(--line);flex:0 0 auto}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--brand);color:#fff;
+    display:grid;place-items:center;font-weight:700;font-size:15px;letter-spacing:-1px}
+  header h1{margin:0;font-size:16px;font-weight:650;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:12px;margin-left:2px}
+  header .spacer{flex:1}
+  .badge{font-size:11px;color:var(--brand);background:var(--brand-soft);
+    border:1px solid var(--brand-line);padding:3px 9px;border-radius:20px}
+  .by151{font-size:11px;color:#fff;background:var(--brand);border:1px solid var(--brand);
+    padding:3px 11px;border-radius:20px;font-weight:600;letter-spacing:.3px;
+    white-space:nowrap;flex:0 0 auto;user-select:none}
+  .wrap{display:flex;flex:1;min-height:0}
+  aside{width:346px;flex:0 0 346px;background:var(--panel);border-right:1px solid var(--line);
+    overflow-y:auto;padding:16px}
+  main{flex:1;min-width:0;display:flex;flex-direction:column;padding:16px 20px;overflow:hidden}
+  .sec{margin-bottom:18px}
+  .sec > h2{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--faint);
+    margin:0 0 8px;font-weight:700}
+  .drop{border:1.5px dashed var(--brand-line);background:var(--brand-soft);border-radius:10px;
+    padding:16px 12px;text-align:center;color:var(--brand);font-size:13px;transition:.15s}
+  .drop.hover{background:#dfeaff;border-color:var(--brand)}
+  .drop b{display:block;font-size:13px;margin-bottom:2px}
+  .drop small{color:var(--muted);font-size:11px}
+  .row{display:flex;gap:8px;margin-top:8px}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:7px 11px;
+    font-size:12px;transition:.15s;white-space:nowrap}
+  .btn:hover{border-color:var(--brand);color:var(--brand)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;
+    padding:9px 14px;font-size:13px;flex:1}
+  .btn.primary:hover{background:#1d4fd8;color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{flex:1}
+  .btn.mini{font-size:12px;padding:9px 9px}
+  .pauseNote{background:#fff8e6;border:1px solid #f0c45a;color:#8a5a00;border-radius:8px;
+    padding:8px 12px;font-size:12px;margin-bottom:10px}
+  #fileList{margin-top:8px;max-height:154px;overflow:auto;border:1px solid var(--line2);
+    border-radius:8px;display:none}
+  #fileList.show{display:block}
+  .fitem{display:flex;align-items:center;gap:7px;padding:6px 9px;border-bottom:1px solid var(--line2);
+    font-size:11.5px}
+  .fitem:last-child{border-bottom:0}
+  .fitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fitem .sz{color:var(--faint);font-family:var(--mono)}
+  .fitem .x{border:0;background:none;color:var(--faint);font-size:15px;line-height:1;padding:0 2px}
+  .fitem .x:hover{color:var(--danger)}
+  label.fld{display:block;margin-bottom:9px}
+  label.fld > span{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+  textarea,input[type=text],select{width:100%;border:1px solid var(--line);border-radius:7px;
+    padding:8px 10px;background:#fff;outline:none;transition:.15s}
+  textarea:focus,input[type=text]:focus,select:focus{border-color:var(--brand);
+    box-shadow:0 0 0 3px rgba(37,99,235,.10)}
+  textarea{resize:vertical;min-height:62px;font-family:var(--mono);font-size:12.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .checks{display:flex;flex-wrap:wrap;gap:12px;margin:2px 0 10px}
+  .chk{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);cursor:pointer}
+  .chk input{margin:0;accent-color:var(--brand)}
+  .hint{font-size:11px;color:var(--faint);line-height:1.5;margin-top:-3px}
+  .statbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;flex:0 0 auto}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:7px 12px;min-width:92px}
+  .stat .k{font-size:10.5px;color:var(--faint);letter-spacing:.3px}
+  .stat .v{font-size:16px;font-weight:650;font-family:var(--mono);margin-top:1px}
+  .stat .v.blue{color:var(--brand)}
+  .stat .v.green{color:var(--ok)}
+  .toolbar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex:0 0 auto}
+  .toolbar .spacer{flex:1}
+  .progress{height:4px;background:var(--line2);border-radius:4px;overflow:hidden;margin-bottom:10px;flex:0 0 auto}
+  .progress > i{display:block;height:100%;width:0;background:var(--brand);transition:width .12s}
+  #results{flex:1;overflow:auto;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:12px}
+  .empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--faint);gap:8px;text-align:center}
+  .empty .big{font-size:34px;opacity:.35}
+  .empty code{background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--brand);font-family:var(--mono)}
+  .fgroup{margin-bottom:14px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .fgroup > h3{margin:0;padding:7px 11px;background:#f8fafc;border-bottom:1px solid var(--line);
+    font-size:12px;font-weight:600;display:flex;gap:8px;align-items:center}
+  .fgroup > h3 .cnt{color:var(--brand);font-family:var(--mono);font-weight:500}
+  .fgroup > h3 .enc{color:var(--faint);font-weight:400;font-size:10.5px;margin-left:auto}
+  .ln{display:flex;font-family:var(--mono);font-size:12.2px;line-height:1.65;
+    border-bottom:1px solid #f7f9fc;white-space:pre-wrap;word-break:break-all}
+  .ln:last-child{border-bottom:0}
+  .ln .no{flex:0 0 62px;text-align:right;padding:2px 10px 2px 6px;color:var(--faint);
+    background:#fbfcfe;border-right:1px solid var(--line2);user-select:none}
+  .ln .tx{padding:2px 10px;flex:1;min-width:0}
+  .ln.hit{background:#fffaf0}
+  .ln.hit .no{color:#a16207;background:#fff5d9;font-weight:600}
+  .ln.ctx{color:var(--faint)}
+  .ln.ctx .no{color:#b8c0cc}
+  mark{background:var(--hit);color:#7c3f00;border-radius:2px;padding:0 1px;
+    box-shadow:0 0 0 1px var(--hit-border)}
+  .sep{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:10.5px;
+    padding:2px 10px;background:#fafbfd;font-family:var(--mono)}
+  .sep:before,.sep:after{content:"";height:1px;background:var(--line);flex:1}
+  .err{background:#fef2f2;border:1px solid #fecaca;color:var(--danger);padding:9px 12px;
+    border-radius:8px;font-size:12px;margin-bottom:10px;display:none}
+  .err.show{display:block}
+  .more{padding:10px;text-align:center;color:var(--muted);font-size:12px}
+  .mysqlbox{margin-top:8px;border:1px solid var(--brand-line);background:var(--brand-soft);
+    border-radius:8px;padding:9px 10px;font-size:11px;line-height:1.55;color:var(--muted)}
+  .mysqlbox h4{margin:0 0 6px;font-size:11.5px;color:var(--brand)}
+  .mysqlbox p{margin:5px 0}
+  .mysqlbox .tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+  .mysqlbox .tag{border-radius:5px;padding:1px 6px;font-family:var(--mono);font-size:10.5px;
+    background:#e4edff;color:#1d4fd8;border:1px solid #c9dbff}
+  .mysqlbox .tag.miss{background:#fff1f1;color:var(--danger);border-color:#fecaca}
+  .mysqlbox .btn{padding:4px 9px;font-size:11px;margin-top:4px}
+  .mysqlbox code{background:#fff;border-radius:3px;padding:1px 4px;font-family:var(--mono);color:var(--brand)}
+  @media(max-width:900px){
+    header{flex-wrap:wrap;gap:8px;padding:10px 14px}
+    .wrap{flex-direction:column;overflow:auto}
+    aside{width:100%;flex:none;border-right:0;border-bottom:1px solid var(--line)}
+    main{min-height:520px}
+  }
+</style>
+</head>
+<body>
+<!-- 制作：151 -->
+<div class="app">
+  <header>
+    <div class="logo">DF</div>
+    <div><h1>DocFind <span class="sub">大文本字段检索</span></h1></div>
+    <div class="spacer"></div>
+    <span class="badge">本地运行 · 文件不上传</span>
+    <span class="by151" title="151制作">151制作</span>
+  </header>
+
+  <div class="wrap">
+    <aside>
+      <div class="sec">
+        <h2>1 · 数据源</h2>
+        <div class="drop" id="drop">
+          <b>拖入 txt / sql / MySQL 表文件或整个文件夹</b>
+          <small>支持 GB 级文件，逐块读取不占内存</small>
+        </div>
+        <div class="row">
+          <button class="btn ghost" id="pickFiles">选择文件</button>
+          <button class="btn ghost" id="pickDir">选择文件夹</button>
+          <button class="btn" id="demo" title="生成一份演示数据">示例</button>
+        </div>
+        <input type="file" id="fileInput" multiple hidden>
+        <input type="file" id="dirInput" webkitdirectory directory hidden>
+        <div id="fileList"></div>
+        <div class="hint" id="fileHint" style="margin-top:6px">未选择文件</div>
+        <div class="mysqlbox" id="mysqlBox" style="display:none"></div>
+      </div>
+
+      <div class="sec">
+        <h2>2 · 检索内容</h2>
+        <textarea id="query" placeholder="例如：12345&#10;多个关键词用空格或换行分隔">12345</textarea>
+        <div class="checks">
+          <label class="chk"><input type="checkbox" id="icase" checked>忽略大小写</label>
+          <label class="chk" title="把扫描结果缓存在浏览器内存，换关键词不重扫；与 MySQL 的 .MYI 索引文件无关"><input type="checkbox" id="indexMode">建索引（重复查更快）</label>
+        </div>
+        <div class="row">
+          <button class="btn primary" id="go">开始检索</button>
+          <button class="btn mini" id="pause" disabled>⏸ 暂停</button>
+          <button class="btn mini" id="cancel" disabled>⏹ 结束</button>
+        </div>
+        <div class="hint" style="margin-top:6px">随时暂停看已找到的结果，点「▶ 继续」从断点接着查（沿用暂停时的关键词与参数）；要换关键词请先「⏹ 结束」再重新检索。Ctrl + Enter 检索 · Esc 结束 · 索引模式下改关键词即时过滤</div>
+      </div>
+
+      <div class="sec">
+        <h2>3 · 匹配规则</h2>
+        <label class="fld"><span>匹配方式</span>
+          <select id="mode">
+            <option value="contains">包含（子串）</option>
+            <option value="word">整词 / 完整编号（123456 不会被 12345 命中）</option>
+            <option value="field">字段相等（按分隔符切列后完全相等）</option>
+            <option value="regex">正则表达式</option>
+          </select>
+        </label>
+        <label class="fld" id="sepFld" style="display:none"><span>字段分隔符</span>
+          <input type="text" id="sep" value="," placeholder="逗号 , 或 \\t 表示制表符">
+        </label>
+        <div class="grid2">
+          <label class="fld"><span>多关键词逻辑</span>
+            <select id="logic"><option value="or">任一命中 OR</option><option value="and">全部命中 AND</option></select>
+          </label>
+          <label class="fld"><span>编码</span>
+            <select id="encoding">
+              <option value="auto">自动识别</option>
+              <option value="utf-8">UTF-8</option>
+              <option value="gb18030">GBK / GB18030</option>
+              <option value="utf-16le">UTF-16 LE</option>
+              <option value="utf-16be">UTF-16 BE</option>
+              <option value="big5">Big5</option>
+            </select>
+          </label>
+        </div>
+        <div class="grid2">
+          <label class="fld"><span>上下文行数</span><input type="text" id="ctx" value="2"></label>
+          <label class="fld"><span>最多命中条数</span><input type="text" id="limit" value="2000"></label>
+        </div>
+        <label class="fld"><span>扩展名过滤（留空 = 全部）</span>
+          <input type="text" id="exts" value=".txt,.log,.csv,.tsv,.md,.json,.jsonl,.ini,.dat,.sql,.frm,.myd,.myi">
+        </label>
+        <label class="fld"><span>MySQL / 二进制表文件</span>
+          <select id="binMode">
+            <option value="auto">自动识别 .frm / .MYD / .MYI</option>
+            <option value="force">全部按二进制扫描</option>
+            <option value="off">全部当文本处理</option>
+          </select>
+        </label>
+        <label class="chk"><input type="checkbox" id="binNumber" checked>同时搜索数字的 INT 二进制编码</label>
+        <div class="hint">.sql 脚本按文本检索；.frm/.MYD/.MYI 是二进制，自动按字节流找出字符串字段、表名/字段名，以及 INT 型编号（结果显示字节偏移）。中文乱码时把上面的「编码」改成表实际使用的字符集。数值编码可能误报，可取消勾选。日期 / 浮点 / 压缩表 / InnoDB(.ibd) 建议先导出 SQL 再查</div>
+      </div>
+
+      <div class="sec">
+        <h2>4 · 合并为单个 txt</h2>
+        <div class="hint" style="margin:0 0 8px">按上方文件列表顺序合并；先解码再统一写出，UTF-8 / GBK / UTF-16 混用也不会乱码</div>
+        <div class="grid2">
+          <label class="fld"><span>输出编码</span>
+            <select id="mergeEnc">
+              <option value="utf8bom">UTF-8（带 BOM）</option>
+              <option value="utf8">UTF-8（无 BOM）</option>
+              <option value="raw">原样拼接（最快，需同编码）</option>
+            </select>
+          </label>
+          <label class="fld"><span>文件之间</span>
+            <select id="mergeSep">
+              <option value="newline">空一行</option>
+              <option value="name">插入文件名标记</option>
+              <option value="none">直接拼接</option>
+            </select>
+          </label>
+        </div>
+        <label class="chk" style="margin:0 0 9px"><input type="checkbox" id="mergeSort">合并前按文件名排序</label>
+        <button class="btn primary" id="mergeBtn" style="width:100%">合并并下载</button>
+        <div class="hint" style="margin-top:6px">超大数据集建议用命令行版 --merge，可写出 GBK 编码且更省内存</div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="statbar">
+        <div class="stat"><div class="k">命中</div><div class="v blue" id="sHit">0</div></div>
+        <div class="stat"><div class="k">扫描行数</div><div class="v" id="sLine">0</div></div>
+        <div class="stat"><div class="k">已读数据</div><div class="v" id="sByte">0 B</div></div>
+        <div class="stat"><div class="k">文件</div><div class="v" id="sFile">0</div></div>
+        <div class="stat"><div class="k">耗时</div><div class="v green" id="sTime">—</div></div>
+      </div>
+      <div class="toolbar">
+        <span class="hint" id="status" style="margin:0">就绪</span>
+        <span class="spacer"></span>
+        <button class="btn" id="expCsv">导出 CSV</button>
+        <button class="btn" id="expTxt">导出 TXT</button>
+        <button class="btn" id="expJson">导出 JSON</button>
+        <button class="btn" id="clear">清空</button>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="err" id="err"></div>
+      <div id="results">
+        <div class="empty" id="empty">
+          <div class="big">⌕</div>
+          <div>选好文件，输入字段值，例如 <code>12345</code></div>
+          <div style="font-size:11.5px">大文件采用流式分块扫描，只保留命中内容，不会把整个文件读进内存</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const fmtSize = b => b < 1024 ? b + ' B' : b < 1048576 ? (b/1024).toFixed(1) + ' KB'
+  : b < 1073741824 ? (b/1048576).toFixed(1) + ' MB' : (b/1073741824).toFixed(2) + ' GB';
+const num = (id, def, min, max) => {
+  const v = parseInt($(id).value, 10);
+  return isNaN(v) ? def : Math.max(min, Math.min(max, v));
+};
+
+let files = [];          // {file, name, size}
+let groups = [];         // [{name, enc, rows:[{kind,no,text}]}]
+let hits = [];           // 导出用：{name,no,text}
+let indexLines = [];     // 索引模式缓存
+let running = false, cancelFlag = false, stopAll = false;
+let op = 'idle';                 // 'search' | 'merge' | 'idle'
+let paused = false, pauseWaiters = [], pauseBegan = 0, pauseAccum = 0;
+let totalLines = 0, totalBytes = 0, hitCount = 0, t0 = 0, timer = null;
+let lastMatch = null;
+
+/* ---------- 文件选择 ---------- */
+function addFiles(list){
+  if (running){ showErr('检索或合并进行中，请先点「⏹ 结束」再添加文件'); return; }
+  const exts = $('exts').value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  let skipped = 0;
+  for (const it of list){
+    const f = it.file || it;
+    if (!f || typeof f.size !== 'number') continue;
+    const name = it.rel || f.webkitRelativePath || f.name || 'unnamed';
+    if (exts.length && !exts.some(e => name.toLowerCase().endsWith(e))) { skipped++; continue; }
+    if (files.some(x => x.file === f && x.name === name)) continue;
+    files.push({file:f, name, size:f.size});
+  }
+  renderFiles();
+  if (skipped) setStatus('已按扩展名过滤掉 ' + skipped + ' 个文件');
+}
+function renderFiles(){
+  const box = $('fileList');
+  box.className = files.length ? 'show' : '';
+  box.innerHTML = files.map((f,i) =>
+    '<div class="fitem"><span class="nm" title="'+esc(f.name)+'">'+esc(f.name)+'</span>'+
+    '<span class="sz">'+fmtSize(f.size)+'</span>'+
+    '<button class="x" data-i="'+i+'" title="移除">×</button></div>').join('');
+  $('fileHint').textContent = files.length
+    ? files.length + ' 个文件 · 合计 ' + fmtSize(files.reduce((a,b)=>a+b.size,0))
+    : '未选择文件';
+  $('sFile').textContent = files.length;
+  renderMysqlBox();
+}
+
+/* ---------- MyISAM 三件套关联 ---------- */
+const MYSQL_ROLES = [['.frm','表结构'], ['.myd','数据'], ['.myi','索引']];
+function mysqlSets(){
+  const sets = new Map();
+  for (const f of files){
+    const n = f.name.replace(/\\/g, '/');
+    const slash = n.lastIndexOf('/');
+    const dir = slash >= 0 ? n.slice(0, slash) : '';
+    const base = n.slice(slash + 1);
+    const dot = base.lastIndexOf('.');
+    if (dot < 0) continue;
+    const ext = base.slice(dot).toLowerCase();
+    if (!['.frm', '.myd', '.myi'].includes(ext)) continue;
+    const key = dir + '/' + base.slice(0, dot);
+    if (!sets.has(key)) sets.set(key, {name: base.slice(0, dot), parts:{}});
+    sets.get(key).parts[ext] = f;
+  }
+  return [...sets.values()];
+}
+function renderMysqlBox(){
+  const box = $('mysqlBox'), sets = mysqlSets();
+  if (!sets.length){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  box.innerHTML = sets.map(s => {
+    const tags = MYSQL_ROLES.map(([e,label]) =>
+      '<span class="tag' + (s.parts[e] ? '' : ' miss') + '">' + e.toUpperCase() + ' ' + label +
+      (s.parts[e] ? '' : '（缺）') + '</span>').join('');
+    const onlyIdx = s.parts['.myi'] && !s.parts['.myd'];
+    const note = onlyIdx
+      ? '<p><b>只上传了 .MYI</b>：索引文件只存索引列的键值和指向 .MYD 的指针，不含其它字段正文，也无法据此还原整行。请补上 .MYD。</p>'
+      : '<p><b>.MYI 不会帮 .MYD「建索引」</b>：工具里的「建索引」只是浏览器内存缓存，与 .MYI 无关。当前对 .MYD 按字节扫描，能找明文字符串和整数编码。</p>';
+    return '<h4>🗄 MyISAM 表：' + esc(s.name) + '</h4><div class="tags">' + tags + '</div>' +
+      note + '<p>要完整行 / 精确条件查询，需让 MySQL 引擎读这三个文件并导出 SQL，再拖回来检索。</p>';
+  }).join('') + '<button class="btn" id="copyGuide">复制导出命令</button>';
+  $('copyGuide').onclick = () => {
+    const t = [...new Set(sets.map(s => s.name))].map(n =>
+      'REM === ' + n + ' ===\n' +
+      'REM 1) 把 ' + n + '.frm / ' + n + '.MYD / ' + n + '.MYI 放进同一库目录（同版本 MySQL/MariaDB 数据目录）\n' +
+      'REM 2) 查看表与索引元信息（不必启动服务）\n' +
+      'myisamchk -dvv "<datadir>\\<db>\\' + n + '.MYI"\n' +
+      'REM 3) 导出 SQL 后用本工具检索\n' +
+      'mysqldump -u root -p <db> ' + n + ' > ' + n + '.sql').join('\n\n');
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(
+        () => setStatus('导出命令已复制；把 <datadir> 与 <db> 换成实际路径'),
+        () => showErr('复制失败，请用命令行版 --mysql-guide 查看'));
+    } else showErr('当前环境不支持自动复制，请用命令行版 --mysql-guide 查看');
+  };
+}
+$('fileList').addEventListener('click', e => {
+  if (e.target.dataset.i !== undefined){ files.splice(+e.target.dataset.i,1); renderFiles(); }
+});
+$('pickFiles').onclick = () => $('fileInput').click();
+$('pickDir').onclick   = () => $('dirInput').click();
+$('fileInput').onchange = e => { addFiles([...e.target.files]); e.target.value=''; };
+$('dirInput').onchange  = e => { addFiles([...e.target.files]); e.target.value=''; };
+$('exts').onchange = () => setStatus('扩展名过滤已更新，重新选择文件时生效');
+$('binMode').onchange = () => {
+  indexLines = [];   // 扫描方式变了，索引缓存必须失效
+  setStatus('二进制处理方式已更改，请重新点「开始检索」');
+};
+
+async function readEntry(entry, out, prefix){
+  if (entry.isFile){
+    const f = await new Promise(res => entry.file(res));
+    out.push({file:f, rel: prefix + entry.name});
+  } else if (entry.isDirectory){
+    const reader = entry.createReader();
+    let batch;
+    do {
+      batch = await new Promise(res => reader.readEntries(res));
+      for (const e of batch) await readEntry(e, out, prefix + entry.name + '/');
+    } while (batch.length);
+  }
+}
+const drop = $('drop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('hover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('hover'));
+drop.addEventListener('drop', async e => {
+  e.preventDefault(); drop.classList.remove('hover');
+  const items = [...(e.dataTransfer.items || [])];
+  const out = [];
+  try {
+    if (items.length && items[0].webkitGetAsEntry){
+      for (const it of items){
+        const en = it.webkitGetAsEntry();
+        if (en) await readEntry(en, out, '');
+      }
+      addFiles(out);
+    } else addFiles([...e.dataTransfer.files]);
+  } catch(err){ showErr('读取拖入内容失败：' + err.message); }
+});
+
+$('demo').onclick = () => {
+  const rows = [
+    '订单号,客户,金额,状态',
+    '10001,张三,320.50,已支付',
+    '12345,李四,1888.00,待发货',
+    '123456,王五,99.00,已取消',
+    '12347,赵六,45.00,已完成',
+    '编号=12345 备注=这是一条中文测试记录 GBK/UTF-8 都能识别',
+    'ORD-12345-2026,周八,760.00,已支付',
+    '10002,钱九,12.00,已支付'
+  ];
+  const blob = new Blob(['\ufeff' + rows.join('\r\n')], {type:'text/plain;charset=utf-8'});
+  const f = new File([blob], '示例数据.txt', {type:'text/plain'});
+  if (running){ showErr('检索或合并进行中，请先点「⏹ 结束」再载入示例'); return; }
+  files = []; addFiles([f]);
+  $('query').value = '12345';
+  setStatus('已载入示例数据，直接点「开始检索」试试');
+};
+
+/* ---------- 编码识别 ---------- */
+async function detectEncoding(f){
+  const head = new Uint8Array(await f.slice(0, 8192).arrayBuffer());
+  if (head.length >= 3 && head[0]===0xEF && head[1]===0xBB && head[2]===0xBF) return 'utf-8';
+  if (head.length >= 2 && head[0]===0xFF && head[1]===0xFE) return 'utf-16le';
+  if (head.length >= 2 && head[0]===0xFE && head[1]===0xFF) return 'utf-16be';
+  let zeros = 0;
+  for (let i=0;i<head.length;i++) if (head[i]===0) zeros++;
+  if (zeros / head.length > .25) return 'utf-16le';
+  for (let cut=0; cut<4; cut++){
+    try { new TextDecoder('utf-8',{fatal:true}).decode(head.subarray(0, head.length-cut)); return 'utf-8'; }
+    catch(e){ /* 末尾恰好被截断，继续 */ }
+  }
+  return 'gb18030';
+}
+function makeDecoder(enc){
+  try { return new TextDecoder(enc); }
+  catch(e){ setStatus('当前浏览器不支持编码 ' + enc + '，已回退 UTF-8'); return new TextDecoder('utf-8'); }
+}
+
+/* ---------- 匹配器 ---------- */
+function buildMatcher(){
+  const raw = $('query').value.trim();
+  if (!raw) throw new Error('请输入要检索的字段值');
+  const mode = $('mode').value, ic = $('icase').checked, logic = $('logic').value;
+  const sepRaw = $('sep').value;
+  const sep = sepRaw === '\\t' ? '\t' : (sepRaw || ',');
+  const norm = s => ic ? s.toLowerCase() : s;
+  let test, hl;
+
+  if (mode === 'regex'){
+    let re;
+    try { re = new RegExp(raw, ic ? 'gi' : 'g'); }
+    catch(e){ throw new Error('正则表达式有误：' + e.message); }
+    test = s => { re.lastIndex = 0; return re.test(s); };
+    hl = new RegExp(raw, ic ? 'gi' : 'g');
+  } else {
+    const terms = raw.split(/\s+/).filter(Boolean).map(norm);
+    if (!terms.length) throw new Error('请输入要检索的字段值');
+    const combine = fn => logic === 'and' ? terms.every(fn) : terms.some(fn);
+    if (mode === 'word'){
+      const res = terms.map(t => new RegExp('(^|[^\\p{L}\\p{N}_])(' + escRe(t) + ')(?=$|[^\\p{L}\\p{N}_])', ic?'iu':'u'));
+      test = s => combine((t,i) => { res[i].lastIndex=0; return res[i].test(s); });
+      hl = new RegExp('(^|[^\\p{L}\\p{N}_])(' + terms.map(escRe).join('|') + ')(?=$|[^\\p{L}\\p{N}_])', ic?'giu':'gu');
+    } else if (mode === 'field'){
+      test = s => { const cols = s.split(sep).map(v => norm(v.trim())); return combine(t => cols.includes(t)); };
+      hl = new RegExp(terms.map(escRe).join('|'), ic?'gi':'g');
+    } else {
+      test = s => { const v = norm(s); return combine(t => v.includes(t)); };
+      hl = new RegExp(terms.map(escRe).join('|'), ic?'gi':'g');
+    }
+  }
+  return {test, hl, raw};
+}
+function highlight(text, re){
+  const clipped = text.length > 2000 ? text.slice(0,2000) + ' …[本行过长已截断]' : text;
+  let out = '', last = 0, m, guard = 0;
+  re.lastIndex = 0;
+  while ((m = re.exec(clipped)) !== null && guard++ < 300){
+    if (!m[0].length){ re.lastIndex++; continue; }
+    const whole = m[0];
+    // 整词模式带前后边界捕获组，只高亮第 2 组（它位于匹配串末尾）
+    const g = m[2];
+    const start = g ? m.index + whole.length - g.length : m.index;
+    const str  = g || whole;
+    if (start < last) { continue; }
+    out += esc(clipped.slice(last,start)) + '<mark>' + esc(str) + '</mark>';
+    last = start + str.length;
+  }
+  return out + esc(clipped.slice(last));
+}
+
+/* ---------- MySQL MyISAM / 二进制表文件 ---------- */
+const BIN_EXTS = ['.frm', '.myd', '.myi'];
+const BIN_OVERLAP = 4096, BIN_MIN_RUN = 4;
+let decUtf8 = null, decGbk = null;
+
+function isBinFile(item){
+  const m = $('binMode').value;
+  if (m === 'force') return true;
+  if (m === 'off') return false;
+  const n = item.name.toLowerCase();
+  return BIN_EXTS.some(e => n.endsWith(e));
+}
+const binOk = b => (b >= 0x20 && b <= 0x7E) || b === 0x09 || b >= 0x80;
+function binText(bytes){
+  // 「编码」下拉选了具体字符集时，按它解片段（表是 GBK 库时能正确显示中文）
+  const forced = $('encoding').value;
+  let s = null;
+  if (forced && forced !== 'auto'){
+    try { s = new TextDecoder(forced).decode(bytes); } catch(e){ s = null; }
+  }
+  if (s === null){
+    if (!decUtf8) decUtf8 = new TextDecoder('utf-8');
+    s = decUtf8.decode(bytes);
+    let bad = 0;
+    for (let i=0;i<s.length;i++) if (s.charCodeAt(i) === 0xFFFD) bad++;
+    if (bad > Math.max(1, s.length * .2)){
+      if (decGbk === null){
+        try { decGbk = new TextDecoder('gb18030'); } catch(e){ decGbk = false; }
+      }
+      if (decGbk) s = decGbk.decode(bytes);
+    }
+  }
+  return s.replace(/[\x00-\x08\x0B-\x1F\x7F\uFFFD]/g, '.');
+}
+function numNeedleGroups(terms){
+  const out = [];
+  for (const t of terms){
+    if (!/^\d{1,18}$/.test(t)) continue;
+    const v = BigInt(t), list = [];
+    for (const w of [2,3,4,8]){
+      if (v >= (1n << BigInt(w*8))) continue;
+      const raw = []; let x = v;
+      for (let i=0;i<w;i++){ raw.push(Number(x & 0xffn)); x >>= 8n; }
+      list.push({raw, w});
+    }
+    if (list.length) out.push({term:t, first:list[0].raw[0], list});
+  }
+  return out;
+}
+const hexOff = n => '0x' + n.toString(16).toUpperCase();
+
+// 把二进制命中伪装成「行」喂给现有 collect / index / render 流程，改动面最小
+async function scanBinaryOne(item, onLine, onProg){
+  const f = item.file;
+  let match;
+  try { match = buildMatcher(); }
+  catch(e){ showErr(e.message); return {enc:'二进制', lines:0, bytes:0}; }
+  const terms = $('query').value.trim().split(/\s+/).filter(Boolean);
+  const numGroups = $('binNumber').checked ? numNeedleGroups(terms) : [];
+  const reader = f.stream().getReader();
+  let carry = new Uint8Array(0), base = 0, bytes = 0, no = 0, frags = 0, stopped = false;
+  try {
+    while (!cancelFlag){
+      await waitIfPaused(); if (cancelFlag) break;
+      const {done, value} = await reader.read();
+      if (done) break;
+      bytes += value.length;
+      let buf;
+      if (carry.length){
+        buf = new Uint8Array(carry.length + value.length);
+        buf.set(carry); buf.set(value, carry.length);
+      } else buf = value;
+      const more = bytes < f.size;
+      let cut = buf.length;
+      if (more){
+        // 切点回退到片段边界，避免把一段文字 / 一条记录切成两半
+        cut = Math.max(0, buf.length - BIN_OVERLAP);
+        while (cut > 0 && binOk(buf[cut])) cut--;
+        if (cut === 0) cut = Math.max(0, buf.length - BIN_OVERLAP);
+      }
+
+      // 1) 可打印片段：字符串字段值、.frm 里的表名 / 字段名、.MYI 索引键
+      let i = 0;
+      while (i < cut && !stopped){
+        if (!binOk(buf[i])){ i++; continue; }
+        let j = i;
+        while (j < cut && binOk(buf[j])) j++;
+        if (j - i >= BIN_MIN_RUN){
+          const text = binText(buf.subarray(i, j));
+          frags++;
+          if (match.test(text)){
+            no++;
+            if (onLine(no, '[' + hexOff(base+i) + '] ' + text) === false){ stopped = true; break; }
+          }
+        }
+        i = j;
+      }
+
+      // 2) 数字的定长整数编码：单遍扫描所有宽度，按 (偏移,关键词) 聚合去重
+      if (numGroups.length && !stopped){
+        const found = new Map();
+        for (let p = 0; p < cut; p++){
+          for (const g of numGroups){
+            if (buf[p] !== g.first) continue;
+            for (const nd of g.list){
+              let ok = true;
+              for (let k = 1; k < nd.w; k++){
+                if (buf[p+k] !== nd.raw[k]){ ok = false; break; }
+              }
+              if (!ok) continue;
+              const key = (base+p) + '|' + g.term;
+              if (!found.has(key)) found.set(key, {off:base+p, term:g.term, widths:new Set(), pos:p});
+              found.get(key).widths.add(nd.w);
+            }
+          }
+        }
+        for (const e of [...found.values()].sort((a,b) => a.off - b.off)){
+          const lo = Math.max(0, e.pos - 20), hi = Math.min(buf.length, e.pos + 28);
+          const around = buf.subarray(lo, hi);
+          const hexs = [...around].map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+          const ws = [...e.widths].sort((a,b)=>a-b).map(w => w+'B').join('/');
+          no++; frags++;
+          if (onLine(no, '[' + hexOff(e.off) + ' · 数值 ' + e.term + ' ' + ws + ' 小端] ' +
+                      hexs + ' | ' + binText(around)) === false){ stopped = true; break; }
+        }
+      }
+      onProg(bytes, frags);
+      carry = buf.slice(cut);
+      base += cut;
+      if (stopped || cancelFlag) break;
+      await waitIfPaused(); if (cancelFlag) break;
+    }
+  } finally {
+    try { await reader.cancel(); } catch(e) {}
+    reader.releaseLock();
+  }
+  return {enc:'二进制', lines:frags, bytes};
+}
+
+/* ---------- 扫描 ---------- */
+async function scanOne(item, onLine, onProg){
+  if (isBinFile(item)) return scanBinaryOne(item, onLine, onProg);
+  const f = item.file;
+  const enc = $('encoding').value === 'auto' ? await detectEncoding(f) : $('encoding').value;
+  const dec = makeDecoder(enc);
+  const reader = f.stream().getReader();
+  let pending = '', no = 0, bytes = 0, stopped = false;
+  try {
+    while (!cancelFlag){
+      await waitIfPaused(); if (cancelFlag) break;
+      const {done, value} = await reader.read();
+      if (done) break;
+      bytes += value.length;
+      pending += dec.decode(value, {stream:true});
+      let start = 0, idx;
+      while ((idx = pending.indexOf('\n', start)) !== -1){
+        const raw = pending.slice(start, idx);
+        start = idx + 1;
+        no++;
+        if (onLine(no, raw.endsWith('\r') ? raw.slice(0,-1) : raw) === false){ stopped = true; break; }
+      }
+      pending = pending.slice(start);
+      onProg(bytes, no);
+      if (stopped || cancelFlag) break;
+      await waitIfPaused(); if (cancelFlag) break;
+    }
+    if (!stopped && !cancelFlag){
+      pending += dec.decode();
+      if (pending.length){ no++; onLine(no, pending.replace(/\r$/,'')); }
+    }
+  } finally {
+    try { await reader.cancel(); } catch(e) {}
+    reader.releaseLock();
+  }
+  return {enc, lines:no, bytes};
+}
+
+/* ---------- 暂停 / 继续（断点续查） ----------
+   关键做法：不销毁 reader 与 TextDecoder，直接在「数据块边界」把整个扫描协程挂起。
+   已读字节、行号、跨块未解码完的字节、上下文 ring/tail 全都在闭包里原样保留，
+   继续时从同一个位置接着 read()，不需要字节偏移换算，也不会重复或漏行。 */
+function waitIfPaused(){
+  if (!paused) return Promise.resolve();
+  return new Promise(res => pauseWaiters.push(res));
+}
+function setPaused(v){
+  if (v && !paused){ paused = true; pauseBegan = performance.now(); }
+  else if (!v && paused){ paused = false; pauseAccum += performance.now() - pauseBegan; }
+  if (!v){ const ws = pauseWaiters; pauseWaiters = []; ws.forEach(r => r()); }
+  updateButtons();
+}
+function elapsedSec(){
+  const extra = paused ? performance.now() - pauseBegan : 0;
+  return (performance.now() - t0 - pauseAccum - extra) / 1000;
+}
+function updateButtons(){
+  const busy = running, isSearch = op === 'search';
+  $('go').disabled = busy;
+  $('go').textContent = '开始检索';
+  $('pause').disabled = !busy || !isSearch;
+  $('pause').textContent = paused ? '▶ 继续' : '⏸ 暂停';
+  $('cancel').disabled = !busy;
+  $('cancel').textContent = op === 'merge' ? '取消' : '⏹ 结束';
+  $('mergeBtn').disabled = busy;
+}
+
+function setStatus(s){ $('status').textContent = s; }
+function showErr(s){ $('err').textContent = s; $('err').classList.add('show'); }
+function hideErr(){ $('err').classList.remove('show'); }
+function updateStats(){
+  $('sHit').textContent  = hitCount.toLocaleString();
+  $('sLine').textContent = totalLines.toLocaleString();
+  $('sByte').textContent = fmtSize(totalBytes);
+}
+
+/* 流式模式：带上下文收集的行处理器 */
+function makeCollector(name, match, N, maxHits, rows){
+  let ring = [], tail = 0, lastEmitted = -1, localHits = 0, truncated = false;
+  const push = (no, text, kind) => {
+    if (no <= lastEmitted) return;
+    lastEmitted = no;
+    rows.push({kind, no, text});
+  };
+  return function(no, text){
+    const hit = match.test(text);
+    if (hit){
+      for (const r of ring) push(r.no, r.text, 'ctx');
+      ring = []; tail = N;
+      push(no, text, 'hit');
+      localHits++; hitCount++;
+      hits.push({name, no, text});
+    } else if (tail > 0){
+      push(no, text, 'ctx');
+      tail--;
+    } else {
+      ring.push({no, text});
+      if (ring.length > N) ring.shift();
+    }
+    if (localHits >= maxHits){ truncated = true; return false; }
+    return true;
+  };
+}
+
+async function runStream(match, N, maxHits){
+  groups = []; hits = []; hitCount = 0; totalLines = 0; totalBytes = 0;
+  const total = files.reduce((a,b)=>a+b.size,0) || 1;
+  let doneBytes = 0, lineAcc = 0, byteAcc = 0;
+  for (const item of files){
+    await waitIfPaused();
+    if (cancelFlag || stopAll) break;
+    setStatus('扫描中：' + item.name + '（可随时暂停）');
+    const rows = [];
+    // 提前挂进 groups：暂停发生在本文件中途时，也能立刻看到这个文件已找到的部分结果
+    const group = {name:item.name, enc:'扫描中…', rows};
+    groups.push(group);
+    const collector = makeCollector(item.name, match, N, maxHits, rows);
+    const info = await scanOne(item, collector, (b,l) => {
+      totalLines = lineAcc + l; totalBytes = byteAcc + b;
+      $('bar').style.width = Math.min(100, (doneBytes + b) / total * 100) + '%';
+      if ((l & 8191) === 0) updateStats();
+    });
+    group.enc = info.enc;
+    doneBytes += item.size;
+    lineAcc += info.lines;
+    byteAcc += info.bytes;
+    totalLines = lineAcc; totalBytes = byteAcc;
+    $('bar').style.width = Math.min(100, doneBytes / total * 100) + '%';
+    updateStats();
+    if (hitCount >= maxHits){ stopAll = true; break; }
+  }
+}
+
+async function runIndex(N, maxHits){
+  indexLines = []; totalLines = 0; totalBytes = 0;
+  const total = files.reduce((a,b)=>a+b.size,0) || 1;
+  let done = 0, enc = '';
+  for (const item of files){
+    await waitIfPaused();
+    if (cancelFlag) break;
+    setStatus('建立索引：' + item.name + '（可随时暂停）');
+    const info = await scanOne(item, (no, text) => {
+      if (indexLines.length >= 1500000) return false;
+      indexLines.push({name:item.name, no, text});
+      return true;
+    }, (b,l) => {
+      $('bar').style.width = Math.min(100, (done + b) / total * 100) + '%';
+    });
+    enc = info.enc;
+    done += item.size;
+    totalLines += info.lines; totalBytes += info.bytes;
+    $('bar').style.width = Math.min(100, done / total * 100) + '%';
+    updateStats();
+  }
+  setStatus('索引完成，共 ' + indexLines.length.toLocaleString() + ' 行（编码 ' + enc + '），改关键词即时过滤');
+}
+
+function filterIndex(N, maxHits){
+  let match;
+  try { match = buildMatcher(); } catch(e){ showErr(e.message); return; }
+  lastMatch = match;
+  groups = []; hits = []; hitCount = 0;
+
+  // 先标出命中行，再把命中行 ±N 行纳入显示，避免相邻命中重复输出
+  const mark = [];
+  for (let i=0; i<indexLines.length && mark.length<maxHits; i++)
+    if (match.test(indexLines[i].text)) mark.push(i);
+  const hitSet = new Set(mark);
+  const wanted = new Set();
+  for (const i of mark){
+    for (let j=Math.max(0,i-N); j<=Math.min(indexLines.length-1,i+N); j++)
+      if (indexLines[j].name === indexLines[i].name) wanted.add(j);
+  }
+  const byName = new Map();
+  let prevIdx = -2, prevName = '';
+  for (const j of [...wanted].sort((a,b)=>a-b)){
+    const row = indexLines[j];
+    if (!byName.has(row.name)){
+      byName.set(row.name, {name:row.name, enc:'索引', rows:[]});
+      groups.push(byName.get(row.name));
+    }
+    const g = byName.get(row.name);
+    if (row.name === prevName && j > prevIdx + 1) g.rows.push({kind:'sep'});
+    const isHit = hitSet.has(j);
+    g.rows.push({kind: isHit ? 'hit' : 'ctx', no:row.no, text:row.text});
+    if (isHit){ hitCount++; hits.push({name:row.name, no:row.no, text:row.text}); }
+    prevIdx = j; prevName = row.name;
+  }
+  updateStats(); render();
+}
+
+/* ---------- 渲染 ---------- */
+function render(){
+  const box = $('results');
+  const visible = groups.filter(g => g.rows.length);
+  const note = paused ? '<div class="pauseNote">⏸ 已暂停 · 以下是目前为止找到的结果，点「▶ 继续」从断点接着查，或点「⏹ 结束」停止并保留结果</div>' : '';
+  if (!visible.length){
+    box.innerHTML = note + '<div class="empty"><div class="big">∅</div><div>目前还没有找到匹配内容</div>' +
+      '<div style="font-size:11.5px">' + (paused ? '可以继续往下查，或结束后换个关键词' : '换个关键词，或把匹配方式改成「包含」试试') + '</div></div>';
+    return;
+  }
+  const hl = lastMatch ? lastMatch.hl : null;
+  let html = note;
+  for (const g of visible){
+    const cnt = g.rows.filter(r => r.kind === 'hit').length;
+    html += '<div class="fgroup"><h3>📄 ' + esc(g.name) +
+      ' <span class="cnt">' + cnt + ' 处命中</span><span class="enc">' + esc(g.enc) + '</span></h3>';
+    for (const r of g.rows){
+      if (r.kind === 'sep'){ html += '<div class="sep">···</div>'; continue; }
+      const tx = hl && r.kind === 'hit' ? highlight(r.text, hl) : esc(r.text.length > 2000 ? r.text.slice(0,2000)+' …[已截断]' : r.text);
+      html += '<div class="ln ' + r.kind + '"><span class="no">' + r.no + '</span><span class="tx" title="' +
+        esc(r.text.slice(0,500)) + '">' + tx + '</span></div>';
+    }
+    html += '</div>';
+  }
+  if (stopAll && !paused) html += '<div class="more">已达到命中上限，可调高「最多命中条数」后重新检索</div>';
+  box.innerHTML = html;
+}
+
+/* ---------- 主流程 ---------- */
+async function start(){
+  if (running) return;
+  hideErr();
+  if (!files.length){ showErr('请先选择文件，或点「示例」载入演示数据'); return; }
+  const indexMode = $('indexMode').checked;
+  let match = null;
+  try { match = indexMode ? {raw:'(索引模式)'} : buildMatcher(); }
+  catch(e){ showErr(e.message); return; }
+  lastMatch = match;
+  const N = num('ctx',2,0,20), maxHits = num('limit',2000,1,100000);
+  running = true; cancelFlag = false; stopAll = false; op = 'search';
+  pauseAccum = 0; pauseBegan = 0; paused = false; pauseWaiters = [];
+  updateButtons();
+  $('bar').style.width = '0%'; t0 = performance.now();
+  timer = setInterval(() => { $('sTime').textContent = elapsedSec().toFixed(1)+'s'; }, 100);
+  try {
+    if (indexMode){
+      await runIndex(N, maxHits);
+      filterIndex(N, maxHits);
+    } else {
+      await runStream(match, N, maxHits);
+      render();
+    }
+    setStatus((cancelFlag ? '已结束 · ' : '完成 · ') + hitCount.toLocaleString() + ' 处命中 / ' +
+      totalLines.toLocaleString() + ' 行 / ' + elapsedSec().toFixed(2) + 's' +
+      (stopAll ? '（已达上限，提前停止）' : ''));
+    $('bar').style.width = cancelFlag ? $('bar').style.width : '100%';
+  } catch(e){
+    showErr('检索出错：' + (e && e.message ? e.message : e));
+  } finally {
+    clearInterval(timer);
+    $('sTime').textContent = elapsedSec().toFixed(2)+'s';
+    running = false; op = 'idle'; paused = false; pauseWaiters = [];
+    updateStats(); updateButtons();
+  }
+}
+$('go').onclick = start;
+$('pause').onclick = () => {
+  if (!running || op !== 'search') return;
+  if (paused){
+    setPaused(false);
+    setStatus('继续检索…（从上次暂停的字节位置接着查，已找到的结果保留）');
+  } else {
+    setPaused(true);
+    // 暂停时立刻把到目前为止的结果画出来；索引模式对已缓存的行先做一次过滤
+    if ($('indexMode').checked && indexLines.length)
+      filterIndex(num('ctx',2,0,20), num('limit',2000,1,100000));
+    else render();
+    updateStats();
+    setStatus('已暂停 · 已找到 ' + hitCount.toLocaleString() + ' 处 · 点「▶ 继续」从断点接着查（沿用原关键词），或点「⏹ 结束」停止并保留结果');
+  }
+};
+$('cancel').onclick = () => {
+  if (!running) return;
+  if (op === 'merge'){ cancelFlag = true; setStatus('正在取消合并…'); return; }
+  setPaused(false);      // 先唤醒挂起的扫描协程，否则点「结束」会一直卡在暂停点
+  cancelFlag = true;
+  setStatus('正在结束…已找到的结果会保留');
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); start(); }
+  if (e.key === 'Escape' && running) $('cancel').click();
+});
+$('mode').onchange = () => {
+  $('sepFld').style.display = $('mode').value === 'field' ? 'block' : 'none';
+  if ($('indexMode').checked && indexLines.length) filterIndex(num('ctx',2,0,20), num('limit',2000,1,100000));
+};
+let debounce = null;
+$('query').addEventListener('input', () => {
+  if (!$('indexMode').checked || !indexLines.length) return;
+  clearTimeout(debounce);
+  debounce = setTimeout(() => filterIndex(num('ctx',2,0,20), num('limit',2000,1,100000)), 220);
+});
+['icase','logic','encoding','sep','ctx','limit'].forEach(id => {
+  $(id).addEventListener('change', () => {
+    if ($('indexMode').checked && indexLines.length && running === false)
+      filterIndex(num('ctx',2,0,20), num('limit',2000,1,100000));
+  });
+});
+
+/* ---------- 导出 ---------- */
+function download(name, content, type){
+  const blob = content instanceof Blob ? content : new Blob([content], {type});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function stamp(){
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'_'+p(d.getHours())+p(d.getMinutes())+p(d.getSeconds());
+}
+$('expCsv').onclick = () => {
+  if (!hits.length){ showErr('没有可导出的结果'); return; }
+  const q = s => '"' + String(s).replace(/"/g,'""') + '"';
+  const csv = '\ufeff文件,行号,内容\r\n' + hits.map(h => [h.name,h.no,h.text].map(q).join(',')).join('\r\n');
+  download('docfind_'+stamp()+'.csv', csv, 'text/csv;charset=utf-8');
+};
+$('expTxt').onclick = () => {
+  if (!hits.length){ showErr('没有可导出的结果'); return; }
+  const txt = '# DocFind 检索结果  关键词: ' + ($('query').value.trim().replace(/\s+/g,' ')) + '\r\n' +
+    hits.map(h => h.name + ':' + h.no + ': ' + h.text).join('\r\n');
+  download('docfind_'+stamp()+'.txt', txt, 'text/plain;charset=utf-8');
+};
+$('expJson').onclick = () => {
+  if (!hits.length){ showErr('没有可导出的结果'); return; }
+  download('docfind_'+stamp()+'.json', JSON.stringify({query:$('query').value, count:hits.length, results:hits}, null, 2),
+    'application/json;charset=utf-8');
+};
+$('clear').onclick = () => {
+  if (running){ showErr('检索或合并还在进行，请先点「⏹ 结束」再清空'); return; }
+  groups = []; hits = []; indexLines = []; hitCount = 0; totalLines = 0; totalBytes = 0;
+  $('bar').style.width='0%'; $('sTime').textContent='—'; updateStats(); render(); setStatus('已清空');
+};
+
+/* ---------- 合并 ---------- */
+// 逐块解码 → 统一编码成 UTF-8；用流收集成 Blob，避免整个文件常驻内存
+async function toUtf8Blob(file, enc, onProg){
+  const dec = makeDecoder(enc);
+  const encoder = new TextEncoder();
+  const reader = file.stream().getReader();
+  const stream = new ReadableStream({
+    async pull(controller){
+      if (cancelFlag){ try { await reader.cancel(); } catch(e){} controller.close(); return; }
+      const {done, value} = await reader.read();
+      if (done){
+        const tail = encoder.encode(dec.decode());
+        if (tail.length) controller.enqueue(tail);
+        controller.close();
+        return;
+      }
+      const s = dec.decode(value, {stream:true});
+      controller.enqueue(encoder.encode(s));   // 空块也入队，保证某些流实现会继续 pull
+      onProg(value.length);
+    }
+  });
+  return await new Response(stream).blob();
+}
+// 原样拼接时跳过后续文件开头的 BOM，避免 BOM 出现在合并文件中间
+async function rawBlob(file, isFirst){
+  if (isFirst) return file;
+  const head = new Uint8Array(await file.slice(0,3).arrayBuffer());
+  if (head[0]===0xEF && head[1]===0xBB && head[2]===0xBF) return file.slice(3);
+  if ((head[0]===0xFF && head[1]===0xFE) || (head[0]===0xFE && head[1]===0xFF)) return file.slice(2);
+  return file;
+}
+function sepBlob(mode, encMode, name, isFirst){
+  if (isFirst || mode === 'none') return null;
+  const text = mode === 'name'
+    ? (encMode === 'raw' ? '\r\n==========\r\n' : '\r\n===== ' + name + ' =====\r\n')
+    : '\r\n';
+  return new Blob([text], {type:'text/plain;charset=utf-8'});
+}
+async function mergeFiles(){
+  if (running) return;
+  hideErr();
+  if (!files.length){ showErr('请先选择要合并的文件'); return; }
+  // .frm/.MYD/.MYI 是二进制，按文本解码合并只会得到乱码
+  let ordered = files.filter(x => !BIN_EXTS.some(e => x.name.toLowerCase().endsWith(e)));
+  const skippedBin = files.length - ordered.length;
+  if (!ordered.length){
+    showErr('选中的都是 MySQL 二进制表文件（.frm/.MYD/.MYI），无法按文本合并；请先导出 SQL');
+    return;
+  }
+  if ($('mergeSort').checked) ordered.sort((a,b) => a.name.localeCompare(b.name, 'zh-CN'));
+  const encMode = $('mergeEnc').value, sepMode = $('mergeSep').value;
+  const total = ordered.reduce((a,b) => a + b.size, 0) || 1;
+  const parts = [];
+  let done = 0;
+  running = true; cancelFlag = false; op = 'merge';
+  paused = false; pauseWaiters = []; pauseAccum = 0; pauseBegan = 0;
+  updateButtons();
+  $('bar').style.width = '0%'; t0 = performance.now();
+  timer = setInterval(() => { $('sTime').textContent = elapsedSec().toFixed(1)+'s'; }, 100);
+  try {
+    if (encMode === 'utf8bom') parts.push(new Blob([new Uint8Array([0xEF,0xBB,0xBF])]));
+    for (let i=0; i<ordered.length; i++){
+      if (cancelFlag) break;
+      const item = ordered[i];
+      setStatus('合并中 (' + (i+1) + '/' + ordered.length + ')：' + item.name);
+      const sep = sepBlob(sepMode, encMode, item.name, i === 0);
+      if (sep) parts.push(sep);
+      let part;
+      if (encMode === 'raw'){
+        part = await rawBlob(item.file, i === 0);
+        done += item.size;
+      } else {
+        const enc = await detectEncoding(item.file);
+        part = await toUtf8Blob(item.file, enc, b => {
+          done += b;
+          $('bar').style.width = Math.min(100, done / total * 100) + '%';
+        });
+      }
+      parts.push(part);
+      $('bar').style.width = Math.min(100, done / total * 100) + '%';
+    }
+    if (cancelFlag){ setStatus('已取消合并'); return; }
+    const merged = new Blob(parts, {type:'text/plain;charset=utf-8'});
+    download('merged_' + stamp() + '.txt', merged, 'text/plain;charset=utf-8');
+    setStatus('合并完成：' + ordered.length + ' 个文件 → ' + fmtSize(merged.size) +
+      '（' + (encMode === 'raw' ? '原样拼接' : 'UTF-8') + '）' +
+      (skippedBin ? '，已跳过 ' + skippedBin + ' 个二进制表文件' : ''));
+    $('bar').style.width = '100%';
+  } catch(e){
+    showErr('合并失败：' + (e && e.message ? e.message : e));
+  } finally {
+    clearInterval(timer);
+    $('sTime').textContent = elapsedSec().toFixed(2)+'s';
+    running = false; op = 'idle'; updateButtons();
+  }
+}
+$('mergeBtn').onclick = mergeFiles;
+</script>
+</body>
+</html>
